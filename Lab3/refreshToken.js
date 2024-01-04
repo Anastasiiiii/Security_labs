@@ -1,4 +1,5 @@
 var request = require("request");
+require('dotenv').config();
 
 var options = {
   method: "POST",
