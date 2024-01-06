@@ -25,7 +25,7 @@ fetch("https://kpi.eu.auth0.com/oauth/token", tokenOptions)
       body: JSON.stringify({
         "email": "nastia262002@gmail.com",
         "user_id": "3",
-        "password": "Password3*___strAit",
+        "password": process.env.PASSWORD,
         "connection": "Username-Password-Authentication",
         "user_metadata": {
           "username": "user3",

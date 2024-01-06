@@ -1,7 +1,7 @@
-var request = require("request");
+let request = require("request");
 require('dotenv').config();
 
-var options = {
+let options = {
   method: "POST",
   url: "https://kpi.eu.auth0.com/oauth/token",
   headers: { "content-type": "application/x-www-form-urlencoded" },
