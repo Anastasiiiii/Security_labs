@@ -1,5 +1,5 @@
 require('dotenv').config();
-import axios from "axios";
+const axios = require("axios");
 var userId = process.env.CLIENT_ID;
 
 var options = {
@@ -13,7 +13,7 @@ var options = {
   data: JSON.stringify({
     password: process.env.PASSWORD,
     connection: "Username-Password-Authentication",
-    scope: 'offline_access'
+    scope: 'read:current_user update:current_user_metadata delete:current_user_metadata create:current_user_metadata create:current_user_device_credentials delete:current_user_device_credentials update:current_user_identities offline_access'
   })
 };
 
