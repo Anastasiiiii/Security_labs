@@ -99,7 +99,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-const user = async (token, mail, user_id, password, username, phone_number) => {
+const addUser = async (token, mail, user_id, password, username, phone_number) => {
     let userOptions = {
         method: 'POST',
         headers: userHeaders,  
@@ -108,6 +108,7 @@ const user = async (token, mail, user_id, password, username, phone_number) => {
             user_id: user_id,
             password: password,
             connection: "Username-Password-Authentication",
+            authorization: `Bearer ${token}`,
             user_metadata: {
                 username,
                 phone_number
@@ -146,7 +147,7 @@ const refreshToken = async (client_id, client_secret, refresh_token) => {
     let options = {
         method: "POST",
         url: "https://kpi.eu.auth0.com/oauth/token",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
+        headers: { "content-type": "application/x-www-form-urlencoded"},
         form: {
           client_id: client_id,
           client_secret: client_secret,
@@ -175,24 +176,16 @@ const refreshToken = async (client_id, client_secret, refresh_token) => {
 //     }
 // ]
 
-app.post('/api/login', (req, res) => {
-    const { login, password } = req.body;
-
-    const user = users.find((user) => {
-        if (user.login == login && user.password == password) {
-            return true;
-        }
-        return false
-    });
-
-    if (user) {
-        req.session.username = user.username;
-        req.session.login = user.login;
-
-        res.json({ token: req.sessionId });
+app.post('/api/createUser', async (req, res) => {
+    const { token, mail, user_id, password, username, phone_number } = req.body;
+    addUser()
+    try {
+        await createUser(token, mail, user_id, password, username, phone_number);
+        return res.status(200).json({ message: 'User created successfully' });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    res.status(401).send();
 });
 
 app.listen(port, () => {
