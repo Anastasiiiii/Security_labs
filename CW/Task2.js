@@ -23,14 +23,15 @@ const sub = "nastia262002@gmail.com";
 const campusExamTime = examDateTime;
 const daysUntilBirthday = daysDifference;
 const examTimeAndDaysUntilBirthday = moment.unix(campusExamTime).add(daysUntilBirthday, 'days');
-const examTimeAndDaysUntilBirthdayUnix = examTimeAndDaysUntilBirthday.unix();
-
 const claims = {
     name: name,
     sub: sub,
     iat: moment().unix(),
-    exp: examTimeAndDaysUntilBirthdayUnix,
-    nbf: campusExamTime
+    exp: examTimeAndDaysUntilBirthday.valueOf(),
+    nbf: moment(campusExamTime).valueOf()
 }
 
 console.log(claims);
+
+const token = jwt.sign(claims, 'RmFydHVzaG5pYWs6MDQyNg==');
+console.log("JWT Token:", token);
