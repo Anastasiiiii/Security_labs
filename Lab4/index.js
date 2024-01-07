@@ -66,8 +66,8 @@ const getToken = async () => {
     url: "https://kpi.eu.auth0.com/oauth/token",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     form: {
-      client_id: process.env.AUTH0_CLIENT_ID,
-      client_secret: process.env.AUTH0_CLIENT_SECRET,
+      client_id: process.env.CLIENT_ID,
+      client_secret: process.env.CLIENT_SECRET,
       audience: "https://kpi.eu.auth0.com/api/v2/",
       grant_type: "client_credentials",
     },
@@ -113,7 +113,7 @@ const addUser = async (user) => {
       },
       data: JSON.stringify({
         email: user.email,
-        user_id: process.env.AUTH0_CLIENT_ID,
+        user_id: process.env.CLIENT_ID,
         password: user.password,
         connection: "Username-Password-Authentication",
         user_metadata: {
@@ -140,8 +140,8 @@ const loginUser = async (user) => {
       form: {
         grant_type: "http://auth0.com/oauth/grant-type/password-realm",
         audience: "https://kpi.eu.auth0.com/api/v2/",
-        client_id: process.env.AUTH0_CLIENT_ID,
-        client_secret: process.env.AUTH0_CLIENT_SECRET,
+        client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET,
         username: user.username,
         password: user.password,
         scope: "offline_access",
