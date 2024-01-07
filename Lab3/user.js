@@ -13,7 +13,12 @@ let tokenOptions = {
 };
 
 fetch("https://kpi.eu.auth0.com/oauth/token", tokenOptions)
-  .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Failed to get access token. Status: ${response.status}`);
+    }
+    return response.json();
+  })
   .then(tokenData => {
     let userHeaders = new Headers();
     userHeaders.append("Content-Type", "application/json");
@@ -35,20 +40,11 @@ fetch("https://kpi.eu.auth0.com/oauth/token", tokenOptions)
     };
     return fetch("https://kpi.eu.auth0.com/api/v2/users", userOptions);
   })
-  .then(response => response.text())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Failed to create user. Status: ${response.status}`);
+    }
+    return response.text();
+  })
   .then(result => console.log(result))
-  .catch(error => console.log('error', error));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  .catch(error => console.log('error', error.message));
