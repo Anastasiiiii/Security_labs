@@ -1,6 +1,5 @@
 const crypto = require("crypto");
-// const { RSA } = require('crypto-cz');
-// const rsa = new RSA({ bits: 2048 });
+const CryptoJS = require('crypto-js');
 const { ReadableStreamDefaultController } = require("node:stream/web");
 //Дані для кодування
 const number = "0426";
@@ -143,3 +142,18 @@ const decryptedEmail = decryptedRSA(encryptedEmail, privateKey);
 console.log("Decrypted Number: ", decryptedNumber.toString());
 console.log("Decrypted Name: ", decryptedName.toString());
 console.log("Decrypted Email: ", decryptedEmail.toString());
+
+//Односторонні хеш функції.
+console.log("Односторонні хеш функції");
+function sha3Encrypt(data) {
+    const encryptedData = CryptoJS.SHA3(data, { outputLength: 512 }); 
+    return encryptedData.toString(CryptoJS.enc.Hex); 
+}
+
+const encryptedNumberSHA = sha3Encrypt(number);
+const encryptedNameSHA = sha3Encrypt(name);
+const encryptedEmailSHA = sha3Encrypt(email);
+
+console.log("Encrypted Number: ", encryptedNumberSHA);
+console.log("Encrypted Name: ", encryptedNameSHA);
+console.log("Encrypted Email: ", encryptedEmailSHA);
