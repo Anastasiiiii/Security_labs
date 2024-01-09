@@ -1,16 +1,19 @@
-const net = require('net');
+const tls = require('tls');
 const fs = require('fs');
 const crypto = require('crypto');
 
 const options = {
     key: fs.readFileSync('/home/anastasiii/private-key.pem'),
-    cert: fs.readFileSync('/home/anastasiii/client-cert.crt'),  // Use the client certificate here
+    cert: fs.readFileSync('/home/anastasiii/client-csr.pem'),
     ca: fs.readFileSync('/home/anastasiii/ca-certificate.crt'),
 };
 
-const client = net.createConnection({ port: 3000 }, () => {
+const premasterSecret = crypto.randomBytes(48);
+
+const client = tls.connect(3000, options, () => {
     console.log('Connected to server');
-    
+
+    // Відправляємо привітання серверу
     client.write('Hello from client');
 });
 
@@ -24,7 +27,7 @@ client.on('data', (data) => {
     if (verifier.verify(serverCert, data.toString('base64'), 'base64')) {
         console.log('Server certificate verification successful!');
 
-        const serverCertInfo = crypto.X509Certificate.fromPEM(data);  // Use the received certificate data
+        const serverCertInfo = crypto.X509Certificate.fromPEM(data);
         const currentTimestamp = Date.now();
         const expirationTimestamp = Date.parse(serverCertInfo.validTo);
 
@@ -35,9 +38,12 @@ client.on('data', (data) => {
         }
     } else {
         console.log('Server certificate verification failed!');
-       // console.error(verifier.getError());
     }
 
+    // Відправляємо premaster_secret на сервер
+    client.write(premasterSecret);
+
+    // Завершуємо з'єднання після відправлення premaster_secret
     client.end();
 });
 

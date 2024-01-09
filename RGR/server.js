@@ -1,6 +1,6 @@
-const crypto = require("crypto");
-const net = require('net');
+const tls = require('tls');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const options = {
     key: fs.readFileSync('/home/anastasiii/private-key.pem'),
@@ -10,21 +10,23 @@ const options = {
     rejectUnauthorized: true,
 };
 
-const server = net.createServer(options, (client) => {
+const server = tls.createServer(options, (cleartextStream) => {
     console.log('Client connected');
 
-    client.on('data', (data) => {
+    cleartextStream.on('data', (data) => {
         console.log('Client message:', data.toString());
-        const randomMessage = crypto.randomBytes(16).toString('hex');
 
-        client.write(`Random "Hello" message: ${randomMessage}`);
-        client.write('Hello from server');
-        client.write('Server Certificate:\n');
-        client.write(options.cert);  // Send the server's certificate to the client
-        client.end();
+        const premasterSecret = crypto.randomBytes(48);
+
+        const randomMessage = crypto.randomBytes(16).toString('hex');
+        cleartextStream.write(`Random "Hello" message: ${randomMessage}`);
+        cleartextStream.write('Hello from server');
+        cleartextStream.write('Server Certificate:\n');
+        cleartextStream.write(options.cert);
+        cleartextStream.end();
     });
 
-    client.on('end', () => {
+    cleartextStream.on('end', () => {
         console.log('Client disconnected');
     });
 });
