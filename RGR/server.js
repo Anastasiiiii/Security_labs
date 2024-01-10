@@ -22,7 +22,8 @@ const server = tls.createServer(options, (cleartextStream) => {
         cleartextStream.write(`Random "Hello" message: ${randomMessage}`);
         cleartextStream.write('Hello from server');
         cleartextStream.write('Server Certificate:\n');
-        cleartextStream.write(options.cert);
+        cleartextStream.write(options.cert);  // Вивід сертифікату сервера
+        cleartextStream.write(premasterSecret);  // Вивід premasterSecret
         cleartextStream.end();
     });
 
