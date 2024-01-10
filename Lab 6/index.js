@@ -193,7 +193,7 @@ app.get("/", (req, res) => {
 
   const auth0AuthorizeUrl = "https://kpi.eu.auth0.com/authorize" +
     `?client_id=${process.env.CLIENT_ID}` +
-    "&redirect_uri=http%3A%2F%2Flocalhost%3A3000" +
+    "&redirect_uri=http://localhost:3000/api/login" +
     "&response_type=code" +
     "&response_mode=query";
 
