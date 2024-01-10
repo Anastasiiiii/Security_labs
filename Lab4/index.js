@@ -190,14 +190,6 @@ app.get("/", (req, res) => {
       logout: "http://localhost:3000/logout",
     });
   }
-
-  const auth0AuthorizeUrl = "https://kpi.eu.auth0.com/authorize" +
-    `?client_id=${process.env.CLIENT_ID}` +
-    "&redirect_uri=http%3A%2F%2Flocalhost%3A3000" +
-    "&response_type=code" +
-    "&response_mode=query";
-
-  res.redirect(auth0AuthorizeUrl);
 });
 
 
