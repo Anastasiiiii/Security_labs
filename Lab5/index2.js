@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 
 
+
+
 const checkJwt = auth({
   audience: 'https://kpi.eu.auth0.com/api/v2/',
   issuerBaseURL: 'https://kpi.eu.auth0.com/',

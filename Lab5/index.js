@@ -1,229 +1,110 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const path = require("path");
-const axios = require("axios");
-const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
-const onFinished = require("on-finished");
-const request = require("request");
-
+const express = require('express');
 const app = express();
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+const { auth } = require('express-oauth2-jwt-bearer');
+const request = require('request-promise-native');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
 
-const SESSION_KEY = "Authorization";
+const users = [
+  { id: 1, username: 'user1', password: 'password1' },
+  { id: 2, username: 'user2', password: 'password2' }
+];
 
-class Session {
-  #sessions = {};
+const privateKeyPath = '/home/anastasiii/Downloads/kpi.pem';
+const privateKey = fs.readFileSync(privateKeyPath, 'utf-8');
 
-  constructor() {
-    try {
-      this.#sessions = fs.readFileSync("./sessions.json", "utf8");
-      this.#sessions = JSON.parse(this.#sessions.trim());
-    } catch (e) {
-      this.#sessions = {};
-    }
-  }
-
-  #storeSessions() {
-    fs.writeFileSync(
-      "./sessions.json",
-      JSON.stringify(this.#sessions),
-      "utf-8"
-    );
-  }
-
-  set(key, value) {
-    if (!value) {
-      value = {};
-    }
-    this.#sessions[key] = value;
-    this.#storeSessions();
-  }
-
-  get(key) {
-    return this.#sessions[key];
-  }
-
-  init(res) {
-    const sessionId = uuidv4();
-    this.set(sessionId);
-    return sessionId;
-  }
-
-  destroy(req, res) {
-    const sessionId = req.sessionId;
-    delete this.#sessions[sessionId];
-    this.#storeSessions();
-  }
+async function generateAccessToken(username) {
+  const token = jwt.sign({ username }, privateKey, { algorithm: 'RS256' });
+  return token;
 }
 
-const sessions = new Session();
+async function authenticateUser(username, password) {
+  const user = users.find(u => u.username === username && u.password === password);
+  return !!user;
+}
 
-const getToken = async () => {
+app.use(express.json());
+
+app.post('/api/login', async function (req, res) {
+  const { login, password } = req.body;
+
+  try {
+    const isAuthenticated = await authenticateUser(login, password);
+
+    if (isAuthenticated) {
+      const token = await generateAccessToken(login);
+      res.json({ token, username: login });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
+    }
+  } catch (error) {
+    console.error('Error during login:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+const checkJwt = auth({
+  audience: 'https://kpi.eu.auth0.com/api/v2/',
+  issuerBaseURL: 'https://kpi.eu.auth0.com/',
+});
+
+app.get('/api/private', checkJwt, function (req, res) {
+  res.json({
+    message: 'Hello from a private endpoint! You need to be authenticated to see this.',
+    user: req.user
+  });
+});
+
+async function getToken() {
   const options = {
-    method: "POST",
-    url: "https://kpi.eu.auth0.com/oauth/token",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    method: 'POST',
+    url: 'https://kpi.eu.auth0.com/oauth/token',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
     form: {
       client_id: process.env.CLIENT_ID,
-      client_secret: process.env.CLIENT_SECRET,
-      audience: "https://kpi.eu.auth0.com/api/v2/",
-      grant_type: "client_credentials",
+      client_secret: CLIENT_SECRET,
+      audience: AUDIENCE,
+      grant_type: 'client_credentials',
     },
   };
 
   try {
-    const response = await axios(options);
-    console.log("Token Data:", response.data);
-    return response.data;
+    const response = await request(options);
+    const parsedBody = JSON.parse(response);
+    return parsedBody.access_token;
   } catch (error) {
-    console.error("Error getting token:", error.message);
-    throw error;
+    throw new Error(error);
   }
-};
+}
 
-const makeRequest = async (options) => {
+const publicKeyPath = '/home/anastasiii/Downloads/kpi.pem';
+const publicKey = fs.readFileSync(publicKeyPath, 'utf-8');
+
+app.use(async (req, res, next) => {
   try {
-    const response = await axios(options);
-    return {
-      response: response,
-      body: response.data,
-    };
-  } catch (error) {
-    console.error("Error making request:", error.message);
-    throw error;
-  }
-};
+    const token = await getToken();
 
-
-const users = [];
-
-const addUser = async (user) => {
-  try {
-    const tokenData = await getToken();
-    const token = tokenData.access_token;
-
-    const userOptions = {
-      method: "POST",
-      url: "https://kpi.eu.auth0.com/api/v2/users",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${token}`,
-      },
-      data: JSON.stringify({
-        email: user.email,
-        user_id: process.env.CLIENT_ID,
-        password: user.password,
-        connection: "Username-Password-Authentication",
-        user_metadata: {
-          username: user.username,
-          phone_number: user.phone_number,
-        },
-      }),
-    };
-
-    const response = await makeRequest(userOptions);
-    console.log("User is added", response.body);
-  } catch (error) {
-    console.error("Error adding user:", error.message);
-    throw error;
-  }
-};
-
-const loginUser = async (user) => {
-  try {
-    const tokenOptions = {
-      method: "POST",
-      url: "https://kpi.eu.auth0.com/oauth/token",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      form: {
-        grant_type: "http://auth0.com/oauth/grant-type/password-realm",
-        audience: "https://kpi.eu.auth0.com/api/v2/",
-        client_id: process.env.CLIENT_ID,
-        client_secret: process.env.CLIENT_SECRET,
-        username: user.username,
-        password: user.password,
-        scope: "offline_access",
-        realm: "Username-Password-Authentication",
-      },
-    };
-
-    const response = await makeRequest(tokenOptions);
-    console.log("Login completed!", response.body);
-  } catch (error) {
-    console.error("Error in loginUser:", error.message);
-    throw error;
-  }
-};
-
-app.use((req, res, next) => {
-  let currentSession = {};
-  let sessionId = req.get(SESSION_KEY);
-
-  if (sessionId) {
-    currentSession = sessions.get(sessionId);
-    if (!currentSession) {
-      currentSession = {};
-      sessionId = sessions.init(res);
+    if (token) {
+      jwt.verify(token, publicKey, { algorithms: ['RS256'] }, (err, decoded) => {
+        if (err) {
+          console.error('Token verification failed:', err.message);
+          return res.status(401).json({ message: 'Token verification failed' });
+        }
+        req.user = decoded;
+        console.log('Token successfully verified!');
+        next();
+      });
+    } else {
+      return res.status(401).json({ message: 'Token not provided' });
     }
-  } else {
-    sessionId = sessions.init(res);
-  }
-
-  req.session = currentSession;
-  req.sessionId = sessionId;
-
-  onFinished(req, () => {
-    const currentSession = req.session;
-    const sessionId = req.sessionId;
-    sessions.set(sessionId, currentSession);
-  });
-
-  next();
-});
-
-app.get("/", (req, res) => {
-  if (req.session.username) {
-    return res.json({
-      username: req.session.username,
-      logout: "http://localhost:3000/logout",
-    });
-  }
-  res.sendFile(path.join(__dirname + "/page.html"));
-});
-
-app.post("/api/register", async (req, res) => {
-  try {
-    const { email, password, username, phone_number } = req.body;
-
-    if (!email || !password || !username || !phone_number) {
-      return res.status(400).json({ error: "Incomplete registration data" });
-    }
-
-    const newUser = {
-      email,
-      password,
-      username,
-      phone_number,
-    };
-    users.push(newUser);
-
-    await addUser(newUser);
-    await loginUser(newUser);
-
-    return res.status(200).json({ message: "User registered successfully" });
   } catch (error) {
-    console.error("Error registering user:", error.message);
-    return res.status(500).json({
-      error: "Internal Server Error",
-      message: error.message,
-      stack: error.stack,
-    });
+    console.error('Error verifying token:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+app.use(express.static('public'));
+
+app.listen(3000, function () {
+  console.log('Listening on http://localhost:3000');
 });
