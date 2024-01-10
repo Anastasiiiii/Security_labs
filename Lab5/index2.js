@@ -2,16 +2,15 @@ const express = require('express');
 const app = express();
 const { auth, requiredScopes } = require('express-oauth2-jwt-bearer');
 const request = require('request');
-const jwt = require('jsonwebtoken');  // Додано імпорт jwt модуля
+const jwt = require('jsonwebtoken'); 
+const fs = require('fs');
 
-// Authorization middleware. When used, the Access Token must
-// exist and be verified against the Auth0 JSON Web Key Set.
+
 const checkJwt = auth({
   audience: 'https://kpi.eu.auth0.com/api/v2/',
   issuerBaseURL: 'https://kpi.eu.auth0.com/',
 });
 
-// This route doesn't need authentication
 app.get('/api/public', async function (req, res) {
   try {
     const token = await getToken();
@@ -25,7 +24,6 @@ app.get('/api/public', async function (req, res) {
   }
 });
 
-// This route needs authentication
 app.get('/api/private', checkJwt, function (req, res) {
   res.json({
     message: 'Hello from a private endpoint! You need to be authenticated to see this.',
@@ -65,18 +63,22 @@ async function getToken() {
   });
 }
 
+const publicKey = fs.readFileSync('/home/anastasiii/Downloads/kpi.pem');
+
 app.use(async (req, res, next) => {
     try {
       const token = await getToken();
       if (token) {
-        jwt.verify(token, '/home/anastasiii/Downloads/kpi.pem', (err, decoded) => {
-          if (err) {
-            return res.status(401).json({ message: 'Token verification failed' });
-          }
-          req.user = decoded;
-          console.log('Token successfully verified!');
-          next();
-        });
+        jwt.verify(token, publicKey, { algorithms: ['RS256'] }, (err, decoded) => {
+            if (err) {
+              console.error('Token verification failed:', err.message);
+              return res.status(401).json({ message: 'Token verification failed' });
+            }
+            req.user = decoded;
+            console.log('Token successfully verified!');
+            next();
+          });
+            
       } else {
         return res.status(401).json({ message: 'Token not provided' });
       }
